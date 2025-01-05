@@ -56,6 +56,6 @@ CREATE TABLE IF NOT EXISTS content.person_film_work (
 );
 
 -- Индексы для ускорения запросов
-CREATE INDEX if not exists idx_genre_film_work_genre_id_film_work_id ON content.genre_film_work (genre_id, film_work_id);
+CREATE UNIQUE INDEX if not exists idx_genre_film_work_genre_id_film_work_id ON content.genre_film_work (genre_id, film_work_id);
 CREATE INDEX if not exists idx_person_film_work_person_id_film_work_id ON content.person_film_work (person_id, film_work_id);
 CREATE INDEX if not exists idx_person_film_work_role ON content.person_film_work (role);
