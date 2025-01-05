@@ -1,5 +1,5 @@
 import sqlite3
-from typing import Generator
+from typing import Generator, Type, Union
 import logging
 from film_work_dataclass import FilmWork
 from genre_dataclass import Genre
@@ -9,13 +9,17 @@ from person_film_work_dataclass import PersonFilmWork
 
 logger = logging.getLogger(__name__)
 
+# Создание пользовательского типа
+DataClassType = Union[FilmWork, Genre, Person, GenreFilmWork, PersonFilmWork]
+
 
 class SQLiteLoader:
     """
     Класс для извлечения данных из SQLite базы данных и их обработки партиями (batch).
     """
 
-    TABLE_TO_DATACLASS = {
+    # Сопоставление имен таблиц с соответствующими датаклассами
+    TABLE_TO_DATACLASS: dict[str, Type[DataClassType]] = {
         'film_work': FilmWork,
         'genre': Genre,
         'person': Person,
@@ -23,34 +27,28 @@ class SQLiteLoader:
         'genre_film_work': GenreFilmWork,
     }
 
-    def __init__(self, connection, table_name, batch=100):
+    def __init__(self, cursor: sqlite3.Cursor, table_name: str, batch: int = 100) -> None:
         """
         Инициализирует объект SQLiteLoader.
 
-        :param connection: Объект подключения к SQLite базе данных (sqlite3.Connection).
+        :param cursor: Объект подключения к SQLite базе данных (sqlite3.Cursor).
         :param table_name: Имя таблицы, из которой будут извлекаться данные.
         :param batch: Размер партии данных, которые будут извлекаться из базы (по умолчанию 100).
         :raises ValueError: Если переданы некорректные параметры.
         """
-        self._validate_connection(connection)
         self._validate_batch_size(batch)
         self._validate_table_name(table_name)
 
-        self.connection = connection
-        self.table_name = table_name
-        self.batch = batch
+        self.cursor: sqlite3.Cursor = cursor
+        self.table_name: str = table_name
+        self.batch: int = batch
 
-    def _validate_connection(self, connection):
-        """Проверяет, что переданный объект подключения является валидным."""
-        if not hasattr(connection, 'cursor'):
-            raise ValueError("Provided connection object is not a valid SQLite connection.")
-
-    def _validate_batch_size(self, batch):
+    def _validate_batch_size(self, batch: int) -> None:
         """Проверяет, что размер партии является положительным целым числом."""
         if not isinstance(batch, int) or batch <= 0:
             raise ValueError("Batch size must be a positive integer.")
 
-    def _validate_table_name(self, table_name):
+    def _validate_table_name(self, table_name: str) -> None:
         """Проверяет, что имя таблицы поддерживается."""
         if not isinstance(table_name, str):
             raise ValueError("table_name must be a string.")
@@ -77,7 +75,7 @@ class SQLiteLoader:
         while True:
             try:
                 # Извлекаем партию строк из результата запроса
-                results = sqlite_cursor.fetchmany(self.batch)
+                results: list[sqlite3.Row] = sqlite_cursor.fetchmany(self.batch)
                 if not results:  # Если партия пустая, прекращаем генерацию данных
                     break
                 yield results  # Возвращаем текущую партию строк
@@ -86,7 +84,7 @@ class SQLiteLoader:
                 logger.error(f"Error fetching data: {e}")
                 raise RuntimeError(f"Error fetching data: {e}")
 
-    def load_movies(self) -> Generator[list, None, None]:
+    def load_movies(self) -> Generator[list[DataClassType], None, None]:
         """
         Загружает данные из таблицы и преобразует их в объекты соответствующих датаклассам.
 
@@ -95,17 +93,19 @@ class SQLiteLoader:
         """
         try:
             # Создаем курсор для выполнения запросов к базе данных
-            sqlite_cursor = self.connection.cursor()
+            sqlite_cursor = self.cursor
         except sqlite3.ProgrammingError as e:
             # Логируем ошибку и выбрасываем исключение, если не удалось создать курсор
             logger.error(f"Failed to create cursor: {e}")
             raise RuntimeError(f"Failed to create cursor: {e}")
 
-        dataclass = self.TABLE_TO_DATACLASS[self.table_name]
+        # Определяем соответствующий датакласс для текущей таблицы
+        dataclass: Type[DataClassType] = self.TABLE_TO_DATACLASS[self.table_name]
 
         # Извлекаем данные партиями с помощью метода extract_data
         for batch in self.extract_data(sqlite_cursor):
             try:
+                # Преобразуем строки в объекты датаклассов
                 yield [dataclass(*row) for row in batch]
             except (TypeError, ValueError) as e:
                 logger.error(f"Failed to create objects for table {self.table_name}: {e}")
