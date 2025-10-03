@@ -6,7 +6,7 @@
 ![SQLite](https://img.shields.io/badge/SQLite-3-lightgrey?logo=sqlite&logoColor=white)
 ![License](https://img.shields.io/badge/license-MIT-yellow)
 
-A training project demonstrating **database schema design**, **Django admin customization**, and **data migration** from SQLite to PostgreSQL.
+**Database schema design**, **Django admin customization**, and **data migration** from SQLite to PostgreSQL for online cinema project.
 
 ---
 
