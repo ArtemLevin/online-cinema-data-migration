@@ -92,7 +92,7 @@ python load_data.py
 
 ## 🤝 Contributing
 
-Contributions, issues, and feature requests are welcome!  
+Contribution, issues, and feature requests are welcome!  
 Feel free to open an [issue](../../issues) or submit a [pull request](../../pulls).
 
 ---
